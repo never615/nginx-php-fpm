@@ -44,9 +44,6 @@ RUN rm -Rf /var/www/* &&\
 ADD conf/nginx-site.conf /etc/nginx/conf.d/default.conf
 ADD conf/nginx-site-ssl.conf /etc/nginx/conf.d/default-ssl.conf
 
-# Copy www.conf
-COPY conf/www.conf /etc/php-fpm.d/www.conf
-
 # tweak php-fpm config
 RUN echo "cgi.fix_pathinfo=0" > ${php_vars} &&\
     echo "upload_max_filesize = 100M"  >> ${php_vars} &&\
