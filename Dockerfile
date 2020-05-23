@@ -40,7 +40,7 @@ ADD conf/nginx.conf /etc/nginx/nginx.conf
 
 # nginx site conf
 RUN rm -Rf /var/www/* &&\
-  mkdir /var/www/html/
+  mkdir -p /var/www/html/
 ADD conf/nginx-site.conf /etc/nginx/conf.d/default.conf
 ADD conf/nginx-site-ssl.conf /etc/nginx/conf.d/default-ssl.conf
 
