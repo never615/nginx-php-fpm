@@ -12,7 +12,6 @@ RUN yum update -y && \
 
 # Install ngixn
 RUN yum install -y nginx &&\
-  sed -i -e '/^user  nginx;/s/^.*$/user  www www;/' /etc/nginx/nginx.conf &&\
   \
   # forward request and error logs to docker log collector
   ln -sf /dev/stdout /var/log/nginx/access.log &&\
@@ -50,7 +49,7 @@ RUN echo "cgi.fix_pathinfo=0" > ${php_vars} &&\
     echo "post_max_size = 100M"  >> ${php_vars} &&\
     echo "memory_limit = 128M"  >> ${php_vars} && \
     touch /dev/shm/php-fpm.sock && \
-    chown www:www /dev/shm/php-fpm.sock && \
+    chown nginx:nginx /dev/shm/php-fpm.sock && \
     chmod 666 /dev/shm/php-fpm.sock && \
     sed -i \
         # -e "s/;catch_workers_output\s*=\s*yes/catch_workers_output = yes/g" \
@@ -59,11 +58,11 @@ RUN echo "cgi.fix_pathinfo=0" > ${php_vars} &&\
         # -e "s/pm.min_spare_servers = 1/pm.min_spare_servers = 2/g" \
         # -e "s/pm.max_spare_servers = 3/pm.max_spare_servers = 4/g" \
         # -e "s/;pm.max_requests = 500/pm.max_requests = 200/g" \
-        -e "s/user = apache/user = www/g" \
-        -e "s/group = apache/group = www/g" \
+        -e "s/user = apache/user = nginx/g" \
+        -e "s/group = apache/group = nginx/g" \
         -e "s/;listen.mode = 0660/listen.mode = 0666/g" \
-        -e "s/;listen.owner = nobody/listen.owner = www/g" \
-        -e "s/;listen.group = nobody/listen.group = www/g" \
+        -e "s/;listen.owner = nobody/listen.owner = nginx/g" \
+        -e "s/;listen.group = nobody/listen.group = nginx/g" \
         -e "s/listen = 127.0.0.1:9000/listen = \/dev\/shm\/php-fpm.sock/g" \
         -e "s/^;clear_env = no$/clear_env = no/" \
         -e "s/^;listen.backlog = 511$/listen.backlog = -1/" \
