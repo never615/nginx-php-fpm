@@ -2,9 +2,22 @@ FROM centos:7
 
 LABEL maintainer="never615 <never615@gmail.com>"
 
+ARG REAL_IP_HEADER=1
+ARG RUN_SCRIPTS=1
+
 ENV fpm_conf /etc/php-fpm.conf
 ENV www_conf /etc/php-fpm.d/www.conf
 ENV php_vars /etc/php.d/docker-vars.ini
+
+# aliyun镜像 阿里云epel源
+RUN mv /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo.backup &&\
+  curl -o /etc/yum.repos.d/CentOS-Base.repo https://mirrors.aliyun.com/repo/Centos-7.repo &&\
+  sed -i -e 's/http:\/\//https:\/\//g' /etc/yum.repos.d/CentOS-Base.repo &&\
+  # wget-O /etc/yum.repos.d/epel.repo http://mirrors.aliyun.com/repo/epel-7.repo &&\
+  yum clean all &&\
+  yum makecache
+
+
 
 # Add repository and keys
 RUN yum update -y && \
@@ -15,15 +28,18 @@ RUN yum install -y nginx &&\
   \
   # forward request and error logs to docker log collector
   ln -sf /dev/stdout /var/log/nginx/access.log &&\
-  ln -sf /dev/stderr /var/log/nginx/error.log
+  ln -sf /dev/stderr /var/log/nginx/error.log &&\
+  mkdir -p /usr/share/nginx/run
 
 
 # Install PHP7.4
-RUN yum install -y http://rpms.remirepo.net/enterprise/remi-release-7.rpm &&\
+# RUN yum install -y http://rpms.remirepo.net/enterprise/remi-release-7.rpm &&\
+RUN yum install -y http://mirrors.tuna.tsinghua.edu.cn/remi//enterprise/remi-release-7.rpm &&\
   yum-config-manager --enable remi-php74 &&\
   yum install -y php-fpm php-gd php-mysql php-mysqlnd php-pdo php-mcrypt \
   php-mbstring php-json php-cli php-xml php-pgsql php-pecl-redis php-opcache \
-  php-common php-curl
+  php-common php-curl &&\
+  mkdir -p /run/php-fpm
 
 # Instal Swoole
 RUN yum install -y php-pecl-swoole
@@ -41,7 +57,6 @@ ADD conf/nginx.conf /etc/nginx/nginx.conf
 RUN rm -Rf /var/www/* &&\
   mkdir -p /var/www/html/
 ADD conf/nginx-site.conf /etc/nginx/conf.d/default.conf
-ADD conf/nginx-site-ssl.conf /etc/nginx/conf.d/default-ssl.conf
 
 # tweak php-fpm config
 RUN echo "cgi.fix_pathinfo=0" > ${php_vars} &&\
@@ -68,19 +83,17 @@ RUN echo "cgi.fix_pathinfo=0" > ${php_vars} &&\
         -e "s/^;listen.backlog = 511$/listen.backlog = -1/" \
         ${www_conf}
 
+
+
 # Add Scripts
 ADD scripts/start.sh /start.sh
-ADD scripts/pull /usr/bin/pull
-ADD scripts/push /usr/bin/push
-ADD scripts/letsencrypt-setup /usr/bin/letsencrypt-setup
-ADD scripts/letsencrypt-renew /usr/bin/letsencrypt-renew
-RUN chmod 755 /usr/bin/pull && chmod 755 /usr/bin/push && chmod 755 /usr/bin/letsencrypt-setup && chmod 755 /usr/bin/letsencrypt-renew && chmod 755 /start.sh
+RUN chmod 755 /start.sh
 
 # copy in code
 ADD src/ /var/www/html/
 ADD errors/ /var/www/errors
 
-EXPOSE 443 80
+EXPOSE 80
 
 WORKDIR "/var/www/html"
 CMD ["/start.sh"]
